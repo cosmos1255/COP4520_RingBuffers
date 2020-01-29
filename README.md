@@ -1,7 +1,8 @@
-# COP4520_RingBuffers
+# Concurrent Ring Buffers
+
 
 ## Assignment 1
 
 ## Assignment 2
 
-## Assignment 3
+## Final Report
