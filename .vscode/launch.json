@@ -1,0 +1,28 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Debug (Launch) - Current File",
+            "request": "launch",
+            "mainClass": "${file}"
+        },
+        {
+            "type": "java",
+            "name": "Debug (Launch)-MRLockRingBuffer<COP4520_RingBuffers_36d2df0c>",
+            "request": "launch",
+            "mainClass": "Assignment1.MRLockRingBuffer",
+            "projectName": "COP4520_RingBuffers_36d2df0c"
+        },
+        {
+            "type": "java",
+            "name": "Debug (Launch)-TestSequentialRingBuffer<COP4520_RingBuffers_36d2df0c>",
+            "request": "launch",
+            "mainClass": "Assignment1.TestSequentialRingBuffer",
+            "projectName": "COP4520_RingBuffers_36d2df0c"
+        }
+    ]
+}

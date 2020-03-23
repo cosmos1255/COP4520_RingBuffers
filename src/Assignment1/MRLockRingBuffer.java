@@ -11,12 +11,12 @@ public class MRLockRingBuffer<T> {
     private Object[] elements;
 
     public static void main(String[] args) {
-//        MRSimpleLock mrSimpleLock = new MRSimpleLock();
-//
-//        mrSimpleLock.lock(1);
-//        mrSimpleLock.lock(10);
-//        mrSimpleLock.unlock(10);
-//        mrSimpleLock.unlock(1);
+        // MRSimpleLock mrSimpleLock = new MRSimpleLock();
+        //
+        // mrSimpleLock.lock(1);
+        // mrSimpleLock.lock(10);
+        // mrSimpleLock.unlock(10);
+        // mrSimpleLock.unlock(1);
     }
 
     static class MRLock {
@@ -29,20 +29,18 @@ public class MRLockRingBuffer<T> {
 
         MRLock() {
 
-            while(bufferSize <= maxThreads)
-            {
+            while (bufferSize <= maxThreads) {
                 bufferSize = bufferSize << 1;
             }
             mBuffer = new Cell[bufferSize];
             bufferMask = bufferSize - 1;
-            for (int  i = 0; i < bufferSize; i++)
-            {
+            for (int i = 0; i < bufferSize; i++) {
                 mBuffer[i].mSequence.set(i);
 
-
-                //m_bits are initialized to all 1s, and will be set to all 1s when dequeued
-                //This ensure that after a thread equeue a new request but before it set the m_bits to
-                //proper value, the following request will not pass through
+                // m_bits are initialized to all 1s, and will be set to all 1s when dequeued
+                // This ensure that after a thread equeue a new request but before it set the
+                // m_bits to
+                // proper value, the following request will not pass through
                 mBuffer[i].setmBits(~0);
             }
             mHead = new AtomicInteger(0);
@@ -53,56 +51,53 @@ public class MRLockRingBuffer<T> {
             Cell cell;
             int position;
 
-            for(;;) {
+            for (;;) {
                 position = mTail.get();
                 cell = mBuffer[position & bufferMask];
                 int sequence = cell.getmSequence().get();
                 int difference = sequence - position;
 
-                if(difference == 0) {
+                if (difference == 0) {
                     if (mTail.compareAndSet(position, position + 1)) {
                         break;
                     }
                 }
             }
             cell.setmBits(resources);
-            cell.setmSequence(position+1);
+            cell.setmSequence(position + 1);
 
-            //Spin on all previous locks
+            // Spin on all previous locks
             int spinPos = mHead.get();
-            while(spinPos != position)
-            {
-                //We start from the head moving toward my pos, spin on cell that collide with my request
-                //When that cell is freed we move on to the next one util reaching myself
-                //we need to check both m_sequence and m_bits, because either of them could be set to
-                //indicate a free cell, and we want to move on quickly
-                if(position - mBuffer[spinPos & bufferMask].getmSequence().get() > bufferMask
-                        || (mBuffer[spinPos & bufferMask].getmBits() & resources) == 0)
-                {
+            while (spinPos != position) {
+                // We start from the head moving toward my pos, spin on cell that collide with
+                // my request
+                // When that cell is freed we move on to the next one util reaching myself
+                // we need to check both m_sequence and m_bits, because either of them could be
+                // set to
+                // indicate a free cell, and we want to move on quickly
+                if (position - mBuffer[spinPos & bufferMask].getmSequence().get() > bufferMask
+                        || (mBuffer[spinPos & bufferMask].getmBits() & resources) == 0) {
                     spinPos++;
                 }
             }
 
-            //Good to go
+            // Good to go
             return position;
         }
 
         public void unlock(final int handle) {
-            //Release my lock by setting the bits to 0
+            // Release my lock by setting the bits to 0
             mBuffer[handle & bufferMask].setmBits(0);
 
-            //Dequeue cells that have been released
+            // Dequeue cells that have been released
             int position = mHead.get();
-            while(mBuffer[position & bufferMask].getmBits() != 0)
-            {
+            while (mBuffer[position & bufferMask].getmBits() != 0) {
                 Cell cell = mBuffer[position & bufferMask];
                 int seq = cell.getmSequence().get();
                 int difference = seq - (position + 1);
 
-                if(difference == 0)
-                {
-                    if(mHead.compareAndSet(position, position + 1))
-                    {
+                if (difference == 0) {
+                    if (mHead.compareAndSet(position, position + 1)) {
                         cell.setmBits(~0);
                         cell.setmSequence(position + bufferMask + 1);
                     }
@@ -131,7 +126,7 @@ public class MRLockRingBuffer<T> {
         }
 
         public void setmBits(int mBits) {
-            mBits = mBits;
+            this.mBits = mBits;
         }
     }
 
@@ -144,11 +139,11 @@ public class MRLockRingBuffer<T> {
         }
 
         public void lock(int resources) {
-            for(;;) {
+            for (;;) {
                 int bits = mBits.get();
                 System.out.println("Locking on " + resources);
-                if((bits & resources) == 0) {
-                    if(mBits.compareAndSet(bits, bits | resources)) {
+                if ((bits & resources) == 0) {
+                    if (mBits.compareAndSet(bits, bits | resources)) {
                         System.out.println(mBits.get());
                         break;
                     }
@@ -157,9 +152,9 @@ public class MRLockRingBuffer<T> {
         }
 
         void unlock(int resources) {
-            for(;;) {
+            for (;;) {
                 int bits = mBits.get();
-                if(mBits.compareAndSet(bits, bits & ~resources)) {
+                if (mBits.compareAndSet(bits, bits & ~resources)) {
                     System.out.println(mBits.get());
                     break;
                 }
@@ -167,7 +162,7 @@ public class MRLockRingBuffer<T> {
         }
     }
 
-    //Thread
+    // Thread
 
     public MRLockRingBuffer(int cap) {
         capacity = cap;
@@ -185,25 +180,24 @@ public class MRLockRingBuffer<T> {
     }
 
     boolean enqueue(T v) {
-        if(isEmpty()) { //Empty
+        if (isEmpty()) { // Empty
             elements[0] = v;
             tail++;
-        } else if(isFull()){ //Full
+        } else if (isFull()) { // Full
             return false;
-        }
-        else {
+        } else {
             elements[tail++] = v;
         }
         return true;
     }
 
     boolean dequeue() {
-        if(isEmpty()) { //Empty
+        if (isEmpty()) { // Empty
             return false;
-        } else { //Otherwise, remove from head
+        } else { // Otherwise, remove from head
             elements[head] = null;
             head++;
-            if(head==tail) {
+            if (head == tail) {
                 reset();
             }
         }
@@ -211,7 +205,7 @@ public class MRLockRingBuffer<T> {
     }
 
     Object getObjectAtIndex(int v) {
-        if(elements[v] != null) {
+        if (elements[v] != null) {
             return elements[v];
         } else {
             return null;
@@ -219,11 +213,11 @@ public class MRLockRingBuffer<T> {
     }
 
     int nextHead() {
-        return head+1;
+        return head + 1;
     }
 
     int nextTail() {
-        return tail+1;
+        return tail + 1;
     }
 
     int getSize() {
