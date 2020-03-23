@@ -1,3 +1,4 @@
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MRLock {
@@ -32,8 +33,11 @@ public class MRLock {
     }
 
     public int lock(final int resources) {
+//        System.out.println("Locking resources:" + resources + " and mBits is:" + Arrays.toString(mBuffer));
         Cell cell;
         int position;
+
+        System.out.println("Spinning until difference is 0.");
 
         for (;;) {
             position = mTail.get();
@@ -47,12 +51,24 @@ public class MRLock {
                 }
             }
         }
+
+        System.out.println("Setting mBits.");
         cell.setmBits(resources);
         cell.setmSequence(position + 1);
 
+
+        System.out.println("Spinning on previous locks.");
         // Spin on all previous locks
         int spinPos = mHead.get();
+        long whileStartTime = System.currentTimeMillis();
+        int timesPrinted = 0;
         while (spinPos != position) {
+            long curTime = System.currentTimeMillis();
+            if(curTime - whileStartTime > 5000 && timesPrinted == 0) {
+                timesPrinted++;
+                System.out.println("In lock while loop..");
+
+            }
             // We start from the head moving toward my pos, spin on cell that collide with
             // my request
             // When that cell is freed we move on to the next one util reaching myself
@@ -64,18 +80,28 @@ public class MRLock {
                 spinPos++;
             }
         }
+        System.out.println("Completed spinning and returning position.");
 
         // Good to go
         return position;
     }
 
     public void unlock(final int handle) {
+//        System.out.println("Unlocking resources:" + handle + " and mBits is:" + Arrays.toString(mBuffer));
         // Release my lock by setting the bits to 0
         mBuffer[handle & bufferMask].setmBits(0);
 
         // Dequeue cells that have been released
         int position = mHead.get();
+        System.out.println("While loop.... " + mBuffer[position & bufferMask].getmBits());
+        long whileStartTime = System.currentTimeMillis();
+        int timesPrinted = 0;
         while (mBuffer[position & bufferMask].getmBits() != 0) {
+            long curTime = System.currentTimeMillis();
+            if(curTime - whileStartTime > 5000 && timesPrinted == 0) {
+                timesPrinted++;
+                System.out.println("In unlock while loop.");
+            }
             Cell cell = mBuffer[position & bufferMask];
             int seq = cell.getmSequence().get();
             int difference = seq - (position + 1);

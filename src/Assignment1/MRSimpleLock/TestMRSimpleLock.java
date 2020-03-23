@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class TestMRSimpleLock {
 
-    static private MRLockRingBuffer<Integer> mrLockRingBuffer;
+    static private MRSimpleLockRingBuffer<Integer> mrSimpleLockRingBuffer;
     static private Thread[] threads;
     static private int numThreads = 4;
 	static private int numRandom = 1000;
@@ -46,10 +46,10 @@ public class TestMRSimpleLock {
 			System.out.println("You can optionally dictate the runtime in milliseconds as an argument.");
 		}
 
-        mrLockRingBuffer = new MRLockRingBuffer<>(ringBufferCapacity);
+        mrSimpleLockRingBuffer = new MRSimpleLockRingBuffer<>(ringBufferCapacity);
         threads = new Thread[numThreads];
         for(int i = 0; i < initRingBuffer; i++) {
-			mrLockRingBuffer.enqueue(random.nextInt(100));
+			mrSimpleLockRingBuffer.enqueue(random.nextInt(100));
 		}
 		ArrayList<Integer> randomItems = new ArrayList<Integer>();
 		ArrayList<Integer> operations = new ArrayList<Integer>();
@@ -115,14 +115,14 @@ public class TestMRSimpleLock {
         	while(keepRunning) {
 				switch(operations.get(currOp % operationsSize)) {
 					case enqueueOperation:
-						if(mrLockRingBuffer.enqueue(enqueue.get(currOp % enqueueSize))) {
+						if(mrSimpleLockRingBuffer.enqueue(enqueue.get(currOp % enqueueSize))) {
 							currOp++;
 							enqueueComplete.getAndIncrement();
 						}
 						enqueueAttemped.getAndIncrement();
 						break;
 					case dequeueOperation:
-						if(mrLockRingBuffer.dequeue()) {
+						if(mrSimpleLockRingBuffer.dequeue()) {
 							currOp++;
 							deqeueueComplete.getAndIncrement();
 						}

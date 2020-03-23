@@ -7,23 +7,20 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class TestMRLock {
 
     static private MRLockRingBuffer<Integer> mrLockRingBuffer;
-    static private Thread[] threads;
     static private int numThreads = 4;
-    static private int numRandom = 1000;
-    static private int operationsComplete = 0;
     static private AtomicInteger enqueueComplete = new AtomicInteger(0);
-    static private AtomicInteger deqeueueComplete = new AtomicInteger(0);
-    static private AtomicInteger enqueueAttemped = new AtomicInteger(0);
+    static private AtomicInteger dequeueComplete = new AtomicInteger(0);
+    static private AtomicInteger enqueueAttempted = new AtomicInteger(0);
     static private AtomicInteger dequeueAttempted = new AtomicInteger(0);
 
-    static private int ringBufferCapacity = 5000000;
-    static private int runTimeInMilliseconds = 5000;
+    static private int ringBufferCapacity = 500000;
+    static private int runTimeInMilliseconds = 1000;
 
     static private int percentEnqueue = 50;
     static private int percentDequeue = 50;
     static private final int enqueueOperation = 0;
     static private final int dequeueOperation = 1;
-    static private final int initRingBuffer = 1000;
+    static private final int initRingBuffer = 10000;
     static private boolean keepRunning = true;
 
     public static void main(String[] args) throws InterruptedException {
@@ -47,10 +44,10 @@ public class TestMRLock {
         }
 
         mrLockRingBuffer = new MRLockRingBuffer<>(ringBufferCapacity);
-        threads = new Thread[numThreads];
-        for(int i = 0; i < initRingBuffer; i++) {
-            mrLockRingBuffer.enqueue(random.nextInt(100));
-        }
+        Thread[] threads = new Thread[numThreads];
+//        for(int i = 0; i < initRingBuffer; i++) {
+//            mrLockRingBuffer.enqueue(random.nextInt(100));
+//        }
         ArrayList<Integer> randomItems = new ArrayList<Integer>();
         ArrayList<Integer> operations = new ArrayList<Integer>();
 
@@ -79,6 +76,7 @@ public class TestMRLock {
 
         Thread.sleep(runTimeInMilliseconds);
         keepRunning = false;
+        System.out.println("Finished running!");
 
         for(int i = 0; i < numThreads; i++)
         {
@@ -88,9 +86,9 @@ public class TestMRLock {
                 e.printStackTrace();
             }
         }
-        operationsComplete = enqueueComplete.get() + deqeueueComplete.get();
+        int operationsComplete = enqueueComplete.get() + dequeueComplete.get();
         System.out.println("Total operations complete:" + operationsComplete);
-        System.out.println("Attempted number of enqueues:" + enqueueAttemped.get());
+        System.out.println("Attempted number of enqueues:" + enqueueAttempted.get());
         System.out.println("Attempted number of dequeues:" + dequeueAttempted.get());
     }
 
@@ -117,12 +115,12 @@ public class TestMRLock {
                             currOp++;
                             enqueueComplete.getAndIncrement();
                         }
-                        enqueueAttemped.getAndIncrement();
+                        enqueueAttempted.getAndIncrement();
                         break;
                     case dequeueOperation:
                         if(mrLockRingBuffer.dequeue()) {
                             currOp++;
-                            deqeueueComplete.getAndIncrement();
+                            dequeueComplete.getAndIncrement();
                         }
                         dequeueAttempted.getAndIncrement();
                         break;

@@ -6,14 +6,15 @@ public class MRLockRingBuffer<T> {
     private int tail;
     private int capacity;
     private Object[] elements;
-    private MRLock mrSimpleLock;
+    private MRLock mrLock;
 
     public MRLockRingBuffer(int cap) {
-        this.mrSimpleLock = new MRLock();
+        this.mrLock = new MRLock();
         capacity = cap;
         elements = new Object[cap];
         head = 0;
         tail = 0;
+        System.out.println("Initializing Ring Buffer.");
     }
 
     boolean isFull() {
@@ -25,28 +26,30 @@ public class MRLockRingBuffer<T> {
     }
 
     boolean enqueue(T v) {
-        mrSimpleLock.lock(1); //Lock the tail
+        System.out.println("Enqueuing!");
+        mrLock.lock(1); //Lock the tail
         if(isFull()){ //Full
-            mrSimpleLock.unlock(1);
+            mrLock.unlock(1);
             return false;
         }
         else {
             elements[tail % capacity] = v;
             tail++;
-            mrSimpleLock.unlock(1);
+            mrLock.unlock(1);
         }
         return true;
     }
 
     boolean dequeue() {
-        mrSimpleLock.lock(10);
+        System.out.println("Dequeuing!");
+        mrLock.lock(10);
         if (isEmpty()) { // Empty
-            mrSimpleLock.unlock(10);
+            mrLock.unlock(10);
             return false;
         } else { //Otherwise, remove from head
             elements[head % capacity] = null;
             head++;
-            mrSimpleLock.unlock(10);
+            mrLock.unlock(10);
         }
         return true;
     }
