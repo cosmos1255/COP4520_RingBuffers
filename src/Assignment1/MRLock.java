@@ -16,13 +16,16 @@ public class MRLock {
         mBuffer = new Cell[bufferSize];
         bufferMask = bufferSize - 1;
         for (int i = 0; i < bufferSize; i++) {
-            mBuffer[i].mSequence.set(i);
+            Cell cell = new Cell();
+            cell.mSequence.set(i);
 
             // m_bits are initialized to all 1s, and will be set to all 1s when dequeued
             // This ensure that after a thread equeue a new request but before it set the
             // m_bits to
             // proper value, the following request will not pass through
-            mBuffer[i].setmBits(~0);
+            cell.setmBits(~0);
+
+            mBuffer[i] = cell;
         }
         mHead = new AtomicInteger(0);
         mTail = new AtomicInteger(0);
@@ -91,7 +94,11 @@ public class MRLock {
 
 	static class Cell {
 		AtomicInteger mSequence;
-		int mBits;
+		int mBits = 0;
+
+		Cell() {
+		    mSequence = new AtomicInteger();
+        }
 
 		public AtomicInteger getmSequence() {
 			return mSequence;

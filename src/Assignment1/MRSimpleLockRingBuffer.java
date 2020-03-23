@@ -1,15 +1,15 @@
 import java.util.Arrays;
 
-public class MRLockRingBuffer<T> {
+public class MRSimpleLockRingBuffer<T> {
 
     private int head;
     private int tail;
-    private int capacity;
+    private int capacity; 
     private Object[] elements;
-    private MRLock mrSimpleLock;
+    private MRSimpleLock mrSimpleLock;
 
-    public MRLockRingBuffer(int cap) {
-        this.mrSimpleLock = new MRLock();
+    public MRSimpleLockRingBuffer(int cap) {
+        this.mrSimpleLock = new MRSimpleLock();
         capacity = cap;
         elements = new Object[cap];
         head = 0;
