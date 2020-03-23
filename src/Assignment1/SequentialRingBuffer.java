@@ -25,14 +25,11 @@ public class SequentialRingBuffer<T> {
     }
 
     boolean enqueue(T v) {
-        if(isEmpty()) { //Empty
-            elements[0] = v;
-            tail++;
-        } else if(isFull()){ //Full
+        if(isFull()){ //Full
             return false;
         }
         else {
-            elements[tail++] = v;
+            elements[(tail++) % capacity] = v;
         }
         return true;
     }
@@ -59,11 +56,11 @@ public class SequentialRingBuffer<T> {
     }
 
     int nextHead() {
-        return head++;
+        return head+1;
     }
 
     int nextTail() {
-        return tail++;
+        return tail+1;
     }
 
     int getSize() {

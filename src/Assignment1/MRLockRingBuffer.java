@@ -9,15 +9,7 @@ public class MRLockRingBuffer<T> {
     private int tail;
     private int capacity;
     private Object[] elements;
-
-    public static void main(String[] args) {
-//        MRSimpleLock mrSimpleLock = new MRSimpleLock();
-//
-//        mrSimpleLock.lock(1);
-//        mrSimpleLock.lock(10);
-//        mrSimpleLock.unlock(10);
-//        mrSimpleLock.unlock(1);
-    }
+    private MRSimpleLock mrSimpleLock;
 
     static class MRLock {
         int bufferSize = 2;
@@ -140,7 +132,7 @@ public class MRLockRingBuffer<T> {
         AtomicInteger mBits;
 
         MRSimpleLock() {
-            mBits = new AtomicInteger();
+            this.mBits = new AtomicInteger();
         }
 
         public void lock(int resources) {
@@ -170,6 +162,7 @@ public class MRLockRingBuffer<T> {
     //Thread
 
     public MRLockRingBuffer(int cap) {
+        this.mrSimpleLock = new MRSimpleLock();
         capacity = cap;
         elements = new Object[cap];
         head = 0;
@@ -185,14 +178,13 @@ public class MRLockRingBuffer<T> {
     }
 
     boolean enqueue(T v) {
-        if(isEmpty()) { //Empty
-            elements[0] = v;
-            tail++;
-        } else if(isFull()){ //Full
+        if(isFull()){ //Full
             return false;
         }
         else {
-            elements[tail++] = v;
+            mrSimpleLock.lock(1); //Lock the tail
+            elements[(tail++) % capacity] = v;
+            mrSimpleLock.unlock(1);
         }
         return true;
     }
@@ -201,11 +193,9 @@ public class MRLockRingBuffer<T> {
         if(isEmpty()) { //Empty
             return false;
         } else { //Otherwise, remove from head
-            elements[head] = null;
-            head++;
-            if(head==tail) {
-                reset();
-            }
+            mrSimpleLock.lock(10);
+            elements[head++] = null;
+            mrSimpleLock.unlock(10);
         }
         return true;
     }
