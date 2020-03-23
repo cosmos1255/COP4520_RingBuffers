@@ -5,11 +5,11 @@ public class MRLockRingBuffer<T> {
 
     private int head;
     private int tail;
-    private int capacity;
+    private int capacity; 
     private Object[] elements;
     private MRSimpleLock mrSimpleLock;
 
-    static class MRLock {
+    static class MRLock { 
         int bufferSize = 2;
         int maxThreads = 4;
         int bufferMask;
