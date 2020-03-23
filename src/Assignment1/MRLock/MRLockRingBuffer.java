@@ -14,7 +14,6 @@ public class MRLockRingBuffer<T> {
         elements = new Object[cap];
         head = 0;
         tail = 0;
-        System.out.println("Initializing Ring Buffer.");
     }
 
     boolean isFull() {
@@ -26,30 +25,30 @@ public class MRLockRingBuffer<T> {
     }
 
     boolean enqueue(T v) {
-        System.out.println("Enqueuing!");
-        mrLock.lock(1); //Lock the tail
+//        System.out.println("Enqueuing with thread:" + Thread.currentThread());
+        int pos = mrLock.lock(1); //Lock the tail
         if(isFull()){ //Full
-            mrLock.unlock(1);
+            mrLock.unlock(pos);
             return false;
         }
         else {
             elements[tail % capacity] = v;
             tail++;
-            mrLock.unlock(1);
+            mrLock.unlock(pos);
         }
         return true;
     }
 
     boolean dequeue() {
-        System.out.println("Dequeuing!");
-        mrLock.lock(10);
+//        System.out.println("Dequeuing with thread:" + Thread.currentThread());
+        int pos = mrLock.lock(10);
         if (isEmpty()) { // Empty
-            mrLock.unlock(10);
+            mrLock.unlock(pos);
             return false;
         } else { //Otherwise, remove from head
             elements[head % capacity] = null;
             head++;
-            mrLock.unlock(10);
+            mrLock.unlock(pos);
         }
         return true;
     }

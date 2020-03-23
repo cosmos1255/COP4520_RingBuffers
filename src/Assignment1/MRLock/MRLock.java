@@ -11,7 +11,7 @@ public class MRLock {
 
     MRLock() {
 
-        while (bufferSize <= maxThreads) {
+        while (bufferSize < maxThreads) {
             bufferSize = bufferSize << 1;
         }
         mBuffer = new Cell[bufferSize];
@@ -37,8 +37,6 @@ public class MRLock {
         Cell cell;
         int position;
 
-        System.out.println("Spinning until difference is 0.");
-
         for (;;) {
             position = mTail.get();
             cell = mBuffer[position & bufferMask];
@@ -52,21 +50,20 @@ public class MRLock {
             }
         }
 
-        System.out.println("Setting mBits.");
         cell.setmBits(resources);
         cell.setmSequence(position + 1);
 
 
-        System.out.println("Spinning on previous locks.");
+//        System.out.println("Spinning on previous locks with thread " + Thread.currentThread());
         // Spin on all previous locks
         int spinPos = mHead.get();
         long whileStartTime = System.currentTimeMillis();
         int timesPrinted = 0;
         while (spinPos != position) {
             long curTime = System.currentTimeMillis();
-            if(curTime - whileStartTime > 5000 && timesPrinted == 0) {
+            if(curTime - whileStartTime > 3000 && timesPrinted == 0) {
                 timesPrinted++;
-                System.out.println("In lock while loop..");
+                System.out.println("In lock while loop with thread " + Thread.currentThread());
 
             }
             // We start from the head moving toward my pos, spin on cell that collide with
@@ -75,12 +72,15 @@ public class MRLock {
             // we need to check both m_sequence and m_bits, because either of them could be
             // set to
             // indicate a free cell, and we want to move on quickly
-            if (position - mBuffer[spinPos & bufferMask].getmSequence().get() > bufferMask
-                    || (mBuffer[spinPos & bufferMask].getmBits() & resources) == 0) {
+            int yeet = position - mBuffer[spinPos & bufferMask].getmSequence().get();
+            int yote = (mBuffer[spinPos & bufferMask].getmBits() & resources);
+//            System.out.println("Yeet is " + yeet + " bufferMask is " + bufferMask + " yote is " + yote);
+            if (yeet > bufferMask ||  yote == 0) {
                 spinPos++;
+//                System.out.println(spinPos + " Pos:" + position + " Thread:"+Thread.currentThread());
             }
         }
-        System.out.println("Completed spinning and returning position.");
+//        System.out.println("Done locking with thread " + Thread.currentThread());
 
         // Good to go
         return position;
@@ -93,14 +93,13 @@ public class MRLock {
 
         // Dequeue cells that have been released
         int position = mHead.get();
-        System.out.println("While loop.... " + mBuffer[position & bufferMask].getmBits());
         long whileStartTime = System.currentTimeMillis();
         int timesPrinted = 0;
         while (mBuffer[position & bufferMask].getmBits() != 0) {
             long curTime = System.currentTimeMillis();
-            if(curTime - whileStartTime > 5000 && timesPrinted == 0) {
+            if(curTime - whileStartTime > 3000 && timesPrinted == 0) {
                 timesPrinted++;
-                System.out.println("In unlock while loop.");
+                System.out.println("In unlock while loop with thread " + Thread.currentThread());
             }
             Cell cell = mBuffer[position & bufferMask];
             int seq = cell.getmSequence().get();
@@ -116,6 +115,7 @@ public class MRLock {
             position = mHead.get();
         }
 
+//        System.out.println("Done unlocking with thread " + Thread.currentThread());
     }
 
 	static class Cell {

@@ -14,7 +14,7 @@ public class TestMRLock {
     static private AtomicInteger dequeueAttempted = new AtomicInteger(0);
 
     static private int ringBufferCapacity = 500000;
-    static private int runTimeInMilliseconds = 1000;
+    static private int runTimeInMilliseconds = 10000;
 
     static private int percentEnqueue = 50;
     static private int percentDequeue = 50;
