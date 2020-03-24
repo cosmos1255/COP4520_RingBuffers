@@ -2,6 +2,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class TestMRLock {
@@ -14,18 +15,16 @@ public class TestMRLock {
     static private AtomicInteger dequeueAttempted = new AtomicInteger(0);
 
     static private int ringBufferCapacity = 500000;
-    static private int runTimeInMilliseconds = 10000;
+    static private int runTimeSeconds = 5;
 
     static private int percentEnqueue = 50;
     static private int percentDequeue = 50;
     static private final int enqueueOperation = 0;
     static private final int dequeueOperation = 1;
-    static private final int initRingBuffer = 10000;
-    static private boolean keepRunning = true;
+    static private AtomicBoolean keepRunning = new AtomicBoolean(true);
 
     public static void main(String[] args) throws InterruptedException {
         Random random = new Random();
-        //Pass in percent of enqueue and dequeue optionally
         if(args.length == 2) {
             percentEnqueue = Integer.parseInt(args[0]);
             percentDequeue = Integer.parseInt(args[1]);
@@ -34,20 +33,22 @@ public class TestMRLock {
                 percentEnqueue = 50;
                 percentDequeue = 50;
             }
-        } else if(args.length == 0){
-            System.out.println("You can optionally dictate the percentage of enqueue and dequeues. The default is 50% enqeue and 50% dequeue.");
+        }
+        if(args.length == 0){
+            System.out.println("Example of running program with arguments: java TestMRLock <intPercentEnqueue> <intPercentDequeue> <runtimeSeconds.\njava TestMrLock 50 50 5");
         }
         if(args.length == 3) {
-            runTimeInMilliseconds = Integer.parseInt(args[2]);
+            runTimeSeconds = Integer.parseInt(args[2]);
         } else {
             System.out.println("You can optionally dictate the runtime in milliseconds as an argument.");
         }
+        int[] seed = new int[5000];
+        for(int i = 0; i < 5000; i++) {
+            seed[i] = random.nextInt(500);
+        }
 
-        mrLockRingBuffer = new MRLockRingBuffer<>(ringBufferCapacity);
+        mrLockRingBuffer = new MRLockRingBuffer<>(ringBufferCapacity, seed);
         Thread[] threads = new Thread[numThreads];
-//        for(int i = 0; i < initRingBuffer; i++) {
-//            mrLockRingBuffer.enqueue(random.nextInt(100));
-//        }
         ArrayList<Integer> randomItems = new ArrayList<Integer>();
         ArrayList<Integer> operations = new ArrayList<Integer>();
 
@@ -74,22 +75,20 @@ public class TestMRLock {
             threads[i].start();
         }
 
-        Thread.sleep(runTimeInMilliseconds);
-        keepRunning = false;
+        for(int i = 0; i < runTimeSeconds; i++) {
+            Thread.sleep(1000);
+        }
+        keepRunning.set(false);
         System.out.println("Finished running!");
 
         for(int i = 0; i < numThreads; i++)
         {
-            try {
-                threads[i].join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            threads[i].join();
         }
-        int operationsComplete = enqueueComplete.get() + dequeueComplete.get();
-        System.out.println("Total operations complete:" + operationsComplete);
-        System.out.println("Attempted number of enqueues:" + enqueueAttempted.get());
-        System.out.println("Attempted number of dequeues:" + dequeueAttempted.get());
+        int opsComplete = enqueueComplete.get() + dequeueComplete.get();
+        System.out.println("Total operations complete:" + opsComplete);
+        System.out.println("Attempted number of enqueue:" + enqueueAttempted.get());
+        System.out.println("Attempted number of dequeue:" + dequeueAttempted.get());
     }
 
     static class RingBufferThread extends Thread {
@@ -108,7 +107,7 @@ public class TestMRLock {
             int enqueueSize = enqueue.size();
             int currOp = 0;
             int operationsSize = operations.size();
-            while(keepRunning) {
+            while(keepRunning.get()) {
                 switch(operations.get(currOp % operationsSize)) {
                     case enqueueOperation:
                         if(mrLockRingBuffer.enqueue(enqueue.get(currOp % enqueueSize))) {

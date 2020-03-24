@@ -11,10 +11,8 @@ public class MRSimpleLock {
     public void lock(int resources) {
         for (;;) {
             int bits = mBits.get();
-//            System.out.println("Locking on " + resources);
             if ((bits & resources) == 0) {
                 if (mBits.compareAndSet(bits, bits | resources)) {
-//                    System.out.println(mBits.get());
                     break;
                 }
             }
@@ -25,7 +23,6 @@ public class MRSimpleLock {
         for (;;) {
             int bits = mBits.get();
             if (mBits.compareAndSet(bits, bits & ~resources)) {
-//                System.out.println(mBits.get());
                 break;
             }
         }

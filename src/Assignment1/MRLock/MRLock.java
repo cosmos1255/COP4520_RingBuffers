@@ -1,4 +1,5 @@
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MRLock {
@@ -9,9 +10,9 @@ public class MRLock {
     AtomicInteger mHead;
     AtomicInteger mTail;
 
-    MRLock() {
+    MRLock(int resources) {
 
-        while (bufferSize < maxThreads) {
+        while (bufferSize <= maxThreads) {
             bufferSize = bufferSize << 1;
         }
         mBuffer = new Cell[bufferSize];
@@ -24,7 +25,7 @@ public class MRLock {
             // This ensure that after a thread equeue a new request but before it set the
             // m_bits to
             // proper value, the following request will not pass through
-            cell.setmBits(~0);
+            cell.initializeBitSet(resources);
 
             mBuffer[i] = cell;
         }
@@ -33,7 +34,6 @@ public class MRLock {
     }
 
     public int lock(final int resources) {
-//        System.out.println("Locking resources:" + resources + " and mBits is:" + Arrays.toString(mBuffer));
         Cell cell;
         int position;
 
@@ -53,19 +53,12 @@ public class MRLock {
         cell.setmBits(resources);
         cell.setmSequence(position + 1);
 
-
 //        System.out.println("Spinning on previous locks with thread " + Thread.currentThread());
         // Spin on all previous locks
         int spinPos = mHead.get();
         long whileStartTime = System.currentTimeMillis();
         int timesPrinted = 0;
         while (spinPos != position) {
-            long curTime = System.currentTimeMillis();
-            if(curTime - whileStartTime > 3000 && timesPrinted == 0) {
-                timesPrinted++;
-                System.out.println("In lock while loop with thread " + Thread.currentThread());
-
-            }
             // We start from the head moving toward my pos, spin on cell that collide with
             // my request
             // When that cell is freed we move on to the next one util reaching myself
@@ -76,31 +69,22 @@ public class MRLock {
             int yote = (mBuffer[spinPos & bufferMask].getmBits() & resources);
 //            System.out.println("Yeet is " + yeet + " bufferMask is " + bufferMask + " yote is " + yote);
             if (yeet > bufferMask ||  yote == 0) {
-                spinPos++;
-//                System.out.println(spinPos + " Pos:" + position + " Thread:"+Thread.currentThread());
+                spinPos = (spinPos + 1 ) % bufferSize;
             }
         }
-//        System.out.println("Done locking with thread " + Thread.currentThread());
 
         // Good to go
         return position;
     }
 
     public void unlock(final int handle) {
-//        System.out.println("Unlocking resources:" + handle + " and mBits is:" + Arrays.toString(mBuffer));
         // Release my lock by setting the bits to 0
         mBuffer[handle & bufferMask].setmBits(0);
 
         // Dequeue cells that have been released
         int position = mHead.get();
         long whileStartTime = System.currentTimeMillis();
-        int timesPrinted = 0;
         while (mBuffer[position & bufferMask].getmBits() != 0) {
-            long curTime = System.currentTimeMillis();
-            if(curTime - whileStartTime > 3000 && timesPrinted == 0) {
-                timesPrinted++;
-                System.out.println("In unlock while loop with thread " + Thread.currentThread());
-            }
             Cell cell = mBuffer[position & bufferMask];
             int seq = cell.getmSequence().get();
             int difference = seq - (position + 1);
@@ -111,11 +95,8 @@ public class MRLock {
                     cell.setmSequence(position + bufferMask + 1);
                 }
             }
-
             position = mHead.get();
         }
-
-//        System.out.println("Done unlocking with thread " + Thread.currentThread());
     }
 
 	static class Cell {
@@ -124,6 +105,15 @@ public class MRLock {
 
 		Cell() {
 		    mSequence = new AtomicInteger();
+        }
+
+        //Set all bits to 1
+        public void initializeBitSet(int numResources) {
+		    int start = 1;
+            for(int i = 0; i < numResources; i++) {
+                mBits += start;
+                start *= 10;
+            }
         }
 
 		public AtomicInteger getmSequence() {

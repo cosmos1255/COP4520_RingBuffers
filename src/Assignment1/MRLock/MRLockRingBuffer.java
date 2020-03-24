@@ -8,12 +8,16 @@ public class MRLockRingBuffer<T> {
     private Object[] elements;
     private MRLock mrLock;
 
-    public MRLockRingBuffer(int cap) {
-        this.mrLock = new MRLock();
+    public MRLockRingBuffer(int cap, int[] initialElements) {
+        this.mrLock = new MRLock(2);
         capacity = cap;
         elements = new Object[cap];
+        for(int i = 0; i < initialElements.length; i++) {
+            elements[i] = initialElements[i];
+            tail++;
+        }
         head = 0;
-        tail = 0;
+//        tail = 0;
     }
 
     boolean isFull() {
@@ -25,7 +29,6 @@ public class MRLockRingBuffer<T> {
     }
 
     boolean enqueue(T v) {
-//        System.out.println("Enqueuing with thread:" + Thread.currentThread());
         int pos = mrLock.lock(1); //Lock the tail
         if(isFull()){ //Full
             mrLock.unlock(pos);
@@ -40,8 +43,7 @@ public class MRLockRingBuffer<T> {
     }
 
     boolean dequeue() {
-//        System.out.println("Dequeuing with thread:" + Thread.currentThread());
-        int pos = mrLock.lock(10);
+        int pos = mrLock.lock(10); //Lock the head
         if (isEmpty()) { // Empty
             mrLock.unlock(pos);
             return false;
