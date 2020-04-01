@@ -1,5 +1,6 @@
 public class OperationRecord {
-    private static int threadId;
-
     void helpComplete() {}
+
+    //TODO change?...
+    boolean getResult() {return true;}
 }

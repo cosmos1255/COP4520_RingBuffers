@@ -12,4 +12,6 @@ public class DequeueOperation<T> extends OperationRecord {
         ringBuffer.easyDequeue();
     }
 
+    //TODO implement getResult method?..
+
 }

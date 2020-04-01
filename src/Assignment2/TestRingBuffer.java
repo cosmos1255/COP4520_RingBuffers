@@ -7,6 +7,10 @@ public class TestRingBuffer {
 
     }
 
+    //When creating threads, assign an ID and make a method to get own id, don't rely on built in thread IDs
+
+    //TODO create threads
+
     static void testMakeAnnouncement() {
 
     }

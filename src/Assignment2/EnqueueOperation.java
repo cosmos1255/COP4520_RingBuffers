@@ -13,4 +13,6 @@ public class EnqueueOperation<T> extends OperationRecord {
     {
         ringBuffer.easyEnqueue(newValue);
     }
+
+    //TODO implement getResult method?..
 }
