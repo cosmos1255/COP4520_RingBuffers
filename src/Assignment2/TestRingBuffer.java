@@ -1,15 +1,18 @@
 import java.util.ArrayList;
 import java.util.Random;
 
+
+
 public class TestRingBuffer {
+
+    private static int numThreads = 4;
     public static void main(String[] args) throws InterruptedException {
+
 //        testOperationRecords();
 
     }
 
     //When creating threads, assign an ID and make a method to get own id, don't rely on built in thread IDs
-
-    //TODO create threads
 
     static void testMakeAnnouncement() {
 
@@ -20,8 +23,9 @@ public class TestRingBuffer {
     }
 
     static void testOperationRecords() throws InterruptedException {
+        ProgressAssurance progressAssurance = new ProgressAssurance(numThreads);
         Random random = new Random();
-        RingBuffer<Integer> ringBuffer = new RingBuffer<>(10);
+        RingBuffer ringBuffer = new RingBuffer<>(10, progressAssurance);
         ArrayList<OperationRecord> opRecords = new ArrayList<>();
         ArrayList<OperationRecord> otherRecords = new ArrayList<>();
 

@@ -1,8 +1,8 @@
-public class EnqueueOperation<T> extends OperationRecord {
-    T newValue;
-    RingBuffer<T> ringBuffer;
+public class EnqueueOperation extends OperationRecord {
+    Integer newValue;
+    RingBuffer ringBuffer;
 
-    EnqueueOperation(T newVal, RingBuffer<T> rb)
+    EnqueueOperation(Integer newVal, RingBuffer rb)
     {
         newValue = newVal;
         ringBuffer = rb;

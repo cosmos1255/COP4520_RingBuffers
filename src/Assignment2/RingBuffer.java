@@ -2,11 +2,11 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicStampedReference;
 
-public class RingBuffer<T> {
+public class RingBuffer {
     private AtomicInteger head;
     private AtomicInteger tail;
     private int capacity;
-    private AtomicStampedReference[] elements;
+    private AtomicStampedReference<Integer>[] elements;
     private static final long TERVEL_DEF_BACKOFF_TIME_MS = 1;
     private static final int newStamp = 0;
     private static ProgressAssurance progressAssurance;
@@ -27,7 +27,7 @@ public class RingBuffer<T> {
         return head.get() == tail.get();
     }
 
-    public boolean enqueue(T v) {
+    public boolean enqueue(Integer v) {
         progressAssurance.checkForAnnouncement((int) Thread.currentThread().getId()); //TODO change to new thread ID method
         Limit progAssur = new Limit();
 
@@ -36,11 +36,11 @@ public class RingBuffer<T> {
                 return false;
             int seqId = nextTail();
             int pos = getPos(seqId);
-            T val = null;//Does this have to be an AtomicReference?
+            Integer val = 0;//Does this have to be an AtomicReference?
             do {
                 //TODO implement/figure out what readValue method is for...
 //                if(!readValue(pos, val)) continue;
-                //TODO get the stamp from somewhere and place in valSeqId
+                //TODO get the stamp from somewhere and place in valSeqId?
                 //Equivalent to getInfo
                 long valSeqId = 0L;
                 boolean valIsValueType = valueIsValueType(valSeqId);
@@ -53,8 +53,8 @@ public class RingBuffer<T> {
                 }
                 else if(!valIsValueType) {
                     if(valSeqId < seqId && backoff(pos, val)) continue;
-                    AtomicStampedReference<T> newValue = new AtomicStampedReference<>(v, seqId);
-                    if(elements[pos].compareAndSet(val, newValue, 0, 0)) //Don't need stamps?, so just make expected and new 0
+                    AtomicStampedReference<Integer> newValue = new AtomicStampedReference<>(v, seqId);
+                    if(elements[pos].compareAndSet(val, newValue.getReference(), 0, 0)) //Don't need stamps?, so just make expected and new 0
                         return true;
                 }
                 else if(!backoff(pos, val)) break;
@@ -63,27 +63,89 @@ public class RingBuffer<T> {
             //Do I need anything in here for breaking? Pseudocode not clear on what goes in which while loop
         } while(progAssur.notDelayed(0));
 
-        EnqueueOperation<T> op = new EnqueueOperation<>(v, this);
+        EnqueueOperation op = new EnqueueOperation(v, this);
         progressAssurance.makeAnnouncement(op, (int) Thread.currentThread().getId()); //TODO change to new thread id method
         boolean result = op.getResult(); //How else can I figure out if the operation completed successfully? Method in progressAssurance?
         return result;
     }
 
     //TODO use CAS or similar
-    public void easyEnqueue(T v) {
+    public void easyEnqueue(Integer v) {
         if(!isFull()) {
             elements[tail.getAndIncrement() % capacity] = new AtomicStampedReference<>(v, newStamp);
         }
     }
 
     public boolean dequeue() {
-        if (isEmpty()) { // Empty
-            return false;
-        } else { //Otherwise, remove from head
-            elements[head.get() % capacity] = null;
-            head.getAndIncrement();
-        }
-        return true;
+        progressAssurance.checkForAnnouncement((int) Thread.currentThread().getId()); //TODO change to new thread ID method
+        Limit progAssur = new Limit();
+        do {
+            if(isEmpty()) return false;
+            int seqId = nextHead();
+            int pos = getPos(seqId);
+            Integer val = 0;//Does this have to be an AtomicReference?
+            AtomicStampedReference<Integer> newValue = new AtomicStampedReference<>(nextSeqId(seqId), 0);
+            do {
+                //TODO implement/figure out what readValue method is for...
+//                if(!readValue(pos, val)) continue;
+                //TODO get the stamp from somewhere and place in valSeqId
+                //Equivalent to getInfo
+                long valSeqId = 0L;
+                boolean valIsValueType = valueIsValueType(valSeqId);
+                boolean valIsDelayMarked = valueIsDelayMarked(valSeqId);
+
+                if(valSeqId > seqId) break;
+                if(valIsValueType) {
+                    if(valSeqId == seqId) {
+                        if(valIsDelayMarked) {
+                            newValue = delayMarkValue(newValue); //Why would we do this if the value is already delay marked?
+                            elements[pos].compareAndSet(val, newValue.getReference(), 0, 0);
+                            return true;
+                        }
+                    }
+                    else {
+                        if(!backoff(pos, val)) {
+                            if(valIsDelayMarked) break;
+                            else atomicDelayMark(pos);
+                        }
+                    }
+                }
+                else {
+                    if(valIsDelayMarked) {
+                        int curHead = head.get();
+                        int tempPos = getPos(curHead);
+                        curHead += 2 * capacity;
+                        curHead += pos - tempPos;
+                        elements[pos].compareAndSet(val, curHead, 0, 0);
+                    }
+                    else if(!backoff(pos, val) && elements[pos].compareAndSet(val, newValue.getReference(), 0, 0)) break;
+                }
+            } while(progAssur.isDelayed(1));
+
+            //What goes here?..
+        } while(progAssur.isDelayed(0));
+
+        DequeueOperation op = new DequeueOperation(this);
+        progressAssurance.makeAnnouncement(op, (int) Thread.currentThread().getId()); //TODO change to new thread id method
+        boolean result = op.getResult(); //How else can I figure out if the operation completed successfully? Method in progressAssurance?
+        return result;
+
+
+    }
+
+    private void atomicDelayMark(int pos) {
+        AtomicStampedReference<Integer> value = elements[pos];
+        value.set(value.getReference(), value.getStamp() + 10);
+        elements[pos] = value;
+    }
+
+
+    //Do I need this?
+//    private int getValueType() { }
+
+    public int nextSeqId(int seqId)
+    {
+        return seqId+ 1;
     }
 
     //TODO use CAS or similar
@@ -104,15 +166,15 @@ public class RingBuffer<T> {
     int getPos(int v) { return v % capacity; }
 
     //performs a user-defned back-off procedure, then loads the value held at `pos' and returns whether or not it equals val
-    boolean backoff(int pos, T val) {
+    boolean backoff(int pos, Integer val) {
 
         return false;
     }
 
     //val with a delay mark
-    AtomicStampedReference<T> delayMarkValue(AtomicStampedReference<T> val) {
+    AtomicStampedReference<Integer> delayMarkValue(AtomicStampedReference<Integer> val) {
         int newStamp = val.getStamp();
-        T newVal = val.getReference();
+        Integer newVal = val.getReference();
         val.set(newVal, newStamp + 10);
         return val;
     }

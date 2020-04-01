@@ -1,7 +1,7 @@
-public class DequeueOperation<T> extends OperationRecord {
-    RingBuffer<T> ringBuffer;
+public class DequeueOperation extends OperationRecord {
+    RingBuffer ringBuffer;
 
-    DequeueOperation(RingBuffer<T> rb)
+    DequeueOperation(RingBuffer rb)
     {
         ringBuffer = rb;
     }
