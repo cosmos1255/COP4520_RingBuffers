@@ -7,9 +7,9 @@ public class DequeueOperation extends OperationRecord {
     }
 
     @Override
-    void helpComplete()
+    void helpComplete(int indexOfOperationRecord)
     {
-        ringBuffer.easyDequeue();
+        ringBuffer.easyDequeue(indexOfOperationRecord);
     }
 
     //TODO implement getResult method?..

@@ -25,14 +25,14 @@ public class TestRingBuffer {
     static void testOperationRecords() throws InterruptedException {
         ProgressAssurance progressAssurance = new ProgressAssurance(numThreads);
         Random random = new Random();
-        RingBuffer ringBuffer = new RingBuffer<>(10, progressAssurance);
+        RingBuffer ringBuffer = new RingBuffer(10, progressAssurance);
         ArrayList<OperationRecord> opRecords = new ArrayList<>();
         ArrayList<OperationRecord> otherRecords = new ArrayList<>();
 
         for(int i = 0; i < 5; i++) {
-            opRecords.add(new EnqueueOperation<>(random.nextInt(100), ringBuffer));
-            opRecords.add(new EnqueueOperation<>(6, ringBuffer));
-            otherRecords.add(new DequeueOperation<>(ringBuffer));
+            opRecords.add(new EnqueueOperation(random.nextInt(100), ringBuffer));
+            opRecords.add(new EnqueueOperation(6, ringBuffer));
+            otherRecords.add(new DequeueOperation(ringBuffer));
         }
 
         for(OperationRecord operationRecord : opRecords) {

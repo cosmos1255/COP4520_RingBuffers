@@ -9,9 +9,9 @@ public class EnqueueOperation extends OperationRecord {
     }
 
     @Override
-    void helpComplete()
+    void helpComplete(int indexOfOperationRecord)
     {
-        ringBuffer.easyEnqueue(newValue);
+        ringBuffer.easyEnqueue(newValue, indexOfOperationRecord);
     }
 
     //TODO implement getResult method?..
