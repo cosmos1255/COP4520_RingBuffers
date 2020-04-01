@@ -2,13 +2,14 @@ import java.sql.SQLOutput;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicStampedReference;
 
 public class RingBuffer {
     private AtomicInteger head;
     private AtomicInteger tail;
     private int capacity;
-    private AtomicStampedReference<Integer>[] elements;
+    private AtomicStampedReference[] elements;
     private static final long TERVEL_DEF_BACKOFF_TIME_MS = 1;
     private static final int newStamp = 0;
     private ProgressAssurance progressAssurance;
@@ -22,7 +23,7 @@ public class RingBuffer {
         mapThreadIdToThreadId = mapThreadIds;
         capacity = cap;
         //Initialize the buffer
-        elements = (AtomicStampedReference<Integer>[]) new Object[cap];
+        elements =  new AtomicStampedReference[cap];
         for (int i = 0; i < cap; i++) {
             elements[i] = new AtomicStampedReference<>(0, 0);
         }

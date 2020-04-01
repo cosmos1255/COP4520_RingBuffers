@@ -5,11 +5,11 @@ public class ProgressAssurance {
     static int HELP_DELAY = 100000;
     static int numThreads = 0;
 
-    static AtomicReference<Object>[] opTable; //Do we need atomic references?
+    static AtomicReference[] opTable; //Do we need atomic references?
 
     ProgressAssurance(int numThr) {
         numThreads = numThr;
-        opTable = new AtomicReference<Object>[numThreads];
+        opTable = new AtomicReference[numThreads];
         for(int i = 0; i < numThreads; i++) {
             opTable[i] = new AtomicReference<>();
         }
