@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Random;
 
 
@@ -6,51 +7,51 @@ import java.util.Random;
 public class TestRingBuffer {
 
     private static int numThreads = 4;
+    private static int capacity = 100;
+    private static int executionTime = 5000;
+    private static Thread[] threads;
+
+
+
     public static void main(String[] args) throws InterruptedException {
-
-//        testOperationRecords();
-
-    }
-
-    //When creating threads, assign an ID and make a method to get own id, don't rely on built in thread IDs
-
-    static void testMakeAnnouncement() {
-
-    }
-
-    static void testCheckAnnouncement() {
-
-    }
-
-    static void testOperationRecords() throws InterruptedException {
-        ProgressAssurance progressAssurance = new ProgressAssurance(numThreads);
         Random random = new Random();
-        RingBuffer ringBuffer = new RingBuffer(10, progressAssurance);
-        ArrayList<OperationRecord> opRecords = new ArrayList<>();
-        ArrayList<OperationRecord> otherRecords = new ArrayList<>();
+        threads = new Thread[numThreads];
+        HashMap<Long, Integer> mapThreadIdToThreadId = new HashMap<>();
 
-        for(int i = 0; i < 5; i++) {
-            opRecords.add(new EnqueueOperation(random.nextInt(100), ringBuffer));
-            opRecords.add(new EnqueueOperation(6, ringBuffer));
-            otherRecords.add(new DequeueOperation(ringBuffer));
+        for (int i = 0; i < numThreads; i++) {
+            RingBufferThread rbt = new RingBufferThread();
+            threads[i] = rbt;
+            mapThreadIdToThreadId.put(rbt.getId(), i);
         }
 
-        for(OperationRecord operationRecord : opRecords) {
-            operationRecord.helpComplete();
-            Thread.sleep(250);
-            ringBuffer.printElements();
+        RingBuffer ringBuffer = new RingBuffer(100, new ProgressAssurance(numThreads), mapThreadIdToThreadId);
+
+        for (int i = 0; i < numThreads; i++) {
+            threads[i].start();
         }
 
-        for(OperationRecord operationRecord : otherRecords) {
-            operationRecord.helpComplete();
-            Thread.sleep(250);
-            ringBuffer.printElements();
+        try {
+            Thread.sleep(executionTime);
+        }
+        catch (InterruptedException ignored) {
         }
 
-        for(OperationRecord operationRecord : opRecords) {
-            operationRecord.helpComplete();
-            Thread.sleep(250);
-            ringBuffer.printElements();
+        for(int i = 0; i < numThreads; i++) {
+            threads[i].join();
+        }
+
+    }
+
+    private static class RingBufferThread extends Thread {
+        @Override
+        public void run() {
         }
     }
+
+    private static void initializeOperations() {
+
+    }
+
+
+
 }
