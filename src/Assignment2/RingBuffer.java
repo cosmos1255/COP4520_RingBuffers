@@ -1,8 +1,5 @@
-import java.sql.SQLOutput;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicStampedReference;
 
 public class RingBuffer {
@@ -39,7 +36,7 @@ public class RingBuffer {
      * @return returns true if the buffer is full
      */
     boolean isFull() {
-        return (tail.get() - head.get()) == capacity;
+        return (tail.get() - head.get()) >= capacity;
     }
 
     /**
@@ -48,7 +45,8 @@ public class RingBuffer {
      * @return returns true if the buffer is empty
      */
     boolean isEmpty() {
-        return head.get() == tail.get();
+        return (tail.get() - head.get()) <= 0;
+
     }
 
     /**
@@ -68,7 +66,7 @@ public class RingBuffer {
      * @return returns true if the operation is complete
      */
     public boolean enqueue(Integer v) {
-        progressAssurance.checkForAnnouncement(mapThreadIdToThreadId.get(Thread.currentThread().getId()));
+//        progressAssurance.checkForAnnouncement(mapThreadIdToThreadId.get(Thread.currentThread().getId()));
         Limit progAssur = new Limit();
 
         do {
@@ -82,6 +80,8 @@ public class RingBuffer {
                 val = elements[pos]; //Equivalent to readValue, except possibility of having a Helper class being stored
 
                 /* getInfo */
+                if(val == null)
+                    break;
                 long valSeqId = val.getReference(); // We don't seem to need to have a read value function until we need to check if a helper class is loaded here
                 boolean valIsValueType = valueIsValueType(valSeqId);
                 boolean valIsDelayMarked = valueIsDelayMarked(valSeqId);
@@ -100,7 +100,7 @@ public class RingBuffer {
                     if (valSeqId < seqId && backoff(pos, val.getReference())) continue;
                     AtomicStampedReference<Integer> newValue = new AtomicStampedReference<>(seqId, 1);
                     //Actual enqueue operation
-                    if (elements[pos].compareAndSet(val.getReference(), newValue.getReference(), 0, 0)) //Don't need stamps?, so just make expected and new 0
+                    if ( elements[pos] != null && elements[pos].compareAndSet(val.getReference(), newValue.getReference(), 0, 0)) //Don't need stamps?, so just make expected and new 0
                     {
                         return true;
                     }
@@ -111,9 +111,10 @@ public class RingBuffer {
         } while (progAssur.notDelayed(0));
 
         //Have reached past the limit of tries for enqueue operation, make an announcement for help
-        EnqueueOperation op = new EnqueueOperation(v, this);
-        progressAssurance.makeAnnouncement(op, (int) Thread.currentThread().getId()); //TODO change to new thread id method
-        return op.getResult();
+//        EnqueueOperation op = new EnqueueOperation(v, this);
+//        progressAssurance.makeAnnouncement(op, mapThreadIdToThreadId.get(Thread.currentThread().getId())); //TODO change to new thread id method
+//        return op.getResult();
+        return false;
     }
 
     /**
@@ -130,7 +131,7 @@ public class RingBuffer {
      * backoff and try again later.
      */
     public boolean dequeue() {
-        progressAssurance.checkForAnnouncement(mapThreadIdToThreadId.get(Thread.currentThread().getId()));
+//        progressAssurance.checkForAnnouncement(mapThreadIdToThreadId.get(Thread.currentThread().getId()));
         Limit progAssur = new Limit();
         do {
             if (isEmpty()) return false;
@@ -143,6 +144,8 @@ public class RingBuffer {
                 val = elements[pos]; //Equivalent to readValue, except possibility of having a Helper class being stored
 
                 /* getInfo */
+                if(val == null)
+                    break;
                 long valSeqId = val.getReference(); // We don't seem to need to have a read value function until we need to check if a helper class is loaded here
                 boolean valIsValueType = valueIsValueType(valSeqId);
                 boolean valIsDelayMarked = valueIsDelayMarked(valSeqId);
@@ -174,7 +177,7 @@ public class RingBuffer {
                         curHead += 2 * capacity;
                         curHead += pos - tempPos;
                         elements[pos].compareAndSet(val.getReference(), curHead, 0, 0);
-                    } else if (!backoff(pos, val.getReference()) && elements[pos].compareAndSet(val.getReference(), newValue.getReference(), 0, 0))
+                    } else if (elements[pos] == null && val == null && newValue == null && !backoff(pos, val.getReference()) && elements[pos].compareAndSet(val.getReference(), newValue.getReference(), 0, 0))
                         break;
                 }
             } while (progAssur.isDelayed(1));
@@ -183,11 +186,10 @@ public class RingBuffer {
 
         //Have reached past the limit of tries for dequeue operation, make an announcement for help
 
-        DequeueOperation op = new DequeueOperation(this);
-        progressAssurance.makeAnnouncement(op, (int) Thread.currentThread().getId()); //TODO change to new thread id method
-        return op.getResult();
-
-
+//        DequeueOperation op = new DequeueOperation(this);
+//        progressAssurance.makeAnnouncement(op, mapThreadIdToThreadId.get(Thread.currentThread().getId())); //TODO change to new thread id method
+//        return op.getResult();
+        return false;
     }
 
     private void atomicDelayMark(int pos) {
@@ -203,7 +205,9 @@ public class RingBuffer {
     public void easyDequeue(int indexOfOperationRecord) {
         while (!(progressAssurance.getOperationRecord(indexOfOperationRecord) instanceof Helper) || !(progressAssurance.getOperationRecord(indexOfOperationRecord) instanceof OperationRecord)) {
             if (!isEmpty()) {
-                elements[head.getAndIncrement() % capacity] = null; //TODO replace with CAS
+                int index = capacity % head.get();
+                elements[index] = null; //TODO replace with CAS
+                head.getAndIncrement();
             } else {
                 progressAssurance.setOperationRecord(indexOfOperationRecord, bufferIsEmpty);
             }
@@ -213,7 +217,9 @@ public class RingBuffer {
     public void easyEnqueue(Integer v, int indexOfOperationRecord) {
         while (!(progressAssurance.getOperationRecord(indexOfOperationRecord) instanceof Helper) || !(progressAssurance.getOperationRecord(indexOfOperationRecord) instanceof OperationRecord)) {
             if (!isFull()) {
-                elements[tail.getAndIncrement() % capacity] = new AtomicStampedReference<>(v, newStamp); //TODO replace with CAS
+                int index = capacity % tail.get();
+                elements[index] = new AtomicStampedReference<>(v, newStamp); //TODO replace with CAS
+                tail.getAndIncrement();
             } else {
                 progressAssurance.setOperationRecord(indexOfOperationRecord, bufferIsFull);
             }
@@ -239,7 +245,12 @@ public class RingBuffer {
             Thread.sleep(TERVEL_DEF_BACKOFF_TIME_MS);
         } catch (InterruptedException ignored) {
         }
-        return elements[pos].getReference() != val;
+        if(elements[pos] == null) {
+            return false;
+        }
+        else {
+            return elements[pos].getReference() != val;
+        }
     }
 
     //val with a delay mark
