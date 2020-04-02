@@ -1,6 +1,6 @@
 public class Limit {
 
-    private final long PROG_ASSUR_LIMIT = 100;
+    private final long PROG_ASSUR_LIMIT = 100000;
     private long counter;
 
     boolean notDelayed(long val) {

@@ -10,20 +10,20 @@ public class ProgressAssurance {
     ProgressAssurance(int numThr) {
         numThreads = numThr;
         opTable = new AtomicReference[numThreads];
-        for(int i = 0; i < numThreads; i++) {
+        for (int i = 0; i < numThreads; i++) {
             opTable[i] = new AtomicReference<>();
         }
     }
 
     static void checkForAnnouncement(int helpId) {
         helpId++;
-        if(helpId >= numThreads) {
+        if (helpId >= numThreads) {
             helpId = 0;
         }
 
         Object op = opTable[helpId].get();
 
-        if(op instanceof OperationRecord) {
+        if (op instanceof OperationRecord) {
             ((OperationRecord) op).helpComplete(helpId);
         }
     }
